@@ -29,6 +29,7 @@ import numpy as np
 from scipy import special
 import sonnet as snt
 import tensorflow as tf
+import tree
 
 
 class MCTSActor(acme.Actor):
@@ -66,7 +67,7 @@ class MCTSActor(acme.Actor):
   def _forward(
       self, observation: types.Observation) -> Tuple[types.Probs, types.Value]:
     """Performs a forward pass of the policy-value network."""
-    logits, value = self._network(tf.expand_dims(observation, axis=0))
+    logits, value = self._network(tree.map_structure(lambda o: tf.expand_dims(o, axis=0)), observation)
 
     # Convert to numpy & take softmax.
     logits = logits.numpy().squeeze(axis=0)
