@@ -124,7 +124,7 @@ if '--nightly' in sys.argv:
 class BuildPy(setuptools.command.build_py.build_py):
 
   def run(self):
-    generate_requirements_file()
+    #generate_requirements_file()
     setuptools.command.build_py.build_py.run(self)
 
 
