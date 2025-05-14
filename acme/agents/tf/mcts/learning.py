@@ -83,6 +83,7 @@ class AZLearner(acme.Learner):
     """Does a step of SGD and logs the results."""
     loss = self._step()
     self._logger.write({'loss': loss})
+    self._counter.increment(**{'step': 1})
 
   def get_variables(self, names: List[str]) -> List[List[np.ndarray]]:
     """Exposes the variables for actors to update from."""
