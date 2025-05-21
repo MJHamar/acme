@@ -22,7 +22,6 @@ from acme import core
 from acme.utils import counting
 from acme.utils import loggers
 from acme.utils import observers as observers_lib
-from acme.utils import signals
 
 import dm_env
 from dm_env import specs
@@ -192,15 +191,14 @@ class EnvironmentLoop(core.Worker):
 
     episode_count: int = 0
     step_count: int = 0
-    with signals.runtime_terminator():
-      while not should_terminate(episode_count, step_count):
-        episode_start = time.time()
-        result = self.run_episode()
-        result = {**result, **{'episode_duration': time.time() - episode_start}}
-        episode_count += 1
-        step_count += int(result['episode_length'])
-        # Log the given episode results.
-        self._logger.write(result)
+    while not should_terminate(episode_count, step_count):
+      episode_start = time.time()
+      result = self.run_episode()
+      result = {**result, **{'episode_duration': time.time() - episode_start}}
+      episode_count += 1
+      step_count += int(result['episode_length'])
+      # Log the given episode results.
+      self._logger.write(result)
 
     return step_count
 
