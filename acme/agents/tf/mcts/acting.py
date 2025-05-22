@@ -41,7 +41,7 @@ class MCTSActor(acme.Actor):
       self,
       environment_spec: specs.EnvironmentSpec,
       model: models.Model,
-      network: snt.Module,
+      network: snt.Module, # can also be an InferenceClient
       discount: float,
       num_simulations: int,
       adder: Optional[adders.Adder] = None,
@@ -50,7 +50,13 @@ class MCTSActor(acme.Actor):
 
     # Internalize components: model, network, data sink and variable source.
     self._model = model
-    self._network = tf.function(network)
+    if not isinstance(self._network, snt.Module):
+      self._add_batch_dim = True
+      self._network = tf.function(network)
+    else:
+      self._add_batch_dim = False
+      self._network = network
+
     self._variable_client = variable_client
     self._adder = adder
 
@@ -67,10 +73,16 @@ class MCTSActor(acme.Actor):
   def _forward(
       self, observation: types.Observation) -> Tuple[types.Probs, types.Value]:
     """Performs a forward pass of the policy-value network."""
-    logits, value = self._network(tree.map_structure(lambda o: tf.expand_dims(o, axis=0)), observation)
+    if self._add_batch_dim:
+      logits, value = self._network(tree.map_structure(lambda o: tf.expand_dims(o, axis=0)), observation)
+    else:
+      logits, value = self._network(observation)
 
     # Convert to numpy & take softmax.
-    logits = logits.numpy().squeeze(axis=0)
+    if self._add_batch_dim:
+        logits = logits.numpy().squeeze(axis=0)
+    else:
+        logits = logits.numpy()
     value = value.numpy().item()
     probs = special.softmax(logits)
 
