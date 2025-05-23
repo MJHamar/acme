@@ -50,7 +50,7 @@ class MCTSActor(acme.Actor):
 
     # Internalize components: model, network, data sink and variable source.
     self._model = model
-    if not isinstance(network, snt.Module):
+    if isinstance(network, snt.Module):
       self._add_batch_dim = True
       self._network = tf.function(network)
     else:
