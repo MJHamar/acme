@@ -27,7 +27,7 @@ import dm_env
 from dm_env import specs
 import numpy as np
 import tree
-
+from tqdm import tqdm
 
 class EnvironmentLoop(core.Worker):
   """A simple RL environment loop.
@@ -67,6 +67,7 @@ class EnvironmentLoop(core.Worker):
     self._environment = environment
     self._actor = actor
     self._counter = counter or counting.Counter()
+    self._label = label
     self._logger = logger or loggers.make_default_logger(
         label, steps_key=self._counter.get_steps_key())
     self._should_update = should_update
@@ -103,39 +104,41 @@ class EnvironmentLoop(core.Worker):
       observer.observe_first(self._environment, timestep)
 
     # Run an episode.
-    while not timestep.last():
-      # Book-keeping.
-      episode_steps += 1
+    with tqdm(desc=self._label, unit='step', leave=False) as pbar:
+      while not timestep.last():
+        pbar.update(1)
+        # Book-keeping.
+        episode_steps += 1
 
-      # Generate an action from the agent's policy.
-      select_action_start = time.time()
-      action = self._actor.select_action(timestep.observation)
-      select_action_durations.append(time.time() - select_action_start)
+        # Generate an action from the agent's policy.
+        select_action_start = time.time()
+        action = self._actor.select_action(timestep.observation)
+        select_action_durations.append(time.time() - select_action_start)
 
-      # Step the environment with the agent's selected action.
-      env_step_start = time.time()
-      timestep = self._environment.step(action)
-      env_step_durations.append(time.time() - env_step_start)
+        # Step the environment with the agent's selected action.
+        env_step_start = time.time()
+        timestep = self._environment.step(action)
+        env_step_durations.append(time.time() - env_step_start)
 
-      # Have the agent and observers observe the timestep.
-      self._actor.observe(action, next_timestep=timestep)
-      for observer in self._observers:
-        # One environment step was completed. Observe the current state of the
-        # environment, the current timestep and the action.
-        observer.observe(self._environment, timestep, action)
+        # Have the agent and observers observe the timestep.
+        self._actor.observe(action, next_timestep=timestep)
+        for observer in self._observers:
+          # One environment step was completed. Observe the current state of the
+          # environment, the current timestep and the action.
+          observer.observe(self._environment, timestep, action)
 
-      # Give the actor the opportunity to update itself.
-      if self._should_update:
-        self._actor.update()
+        # Give the actor the opportunity to update itself.
+        if self._should_update:
+          self._actor.update()
 
-      # Equivalent to: episode_return += timestep.reward
-      # We capture the return value because if timestep.reward is a JAX
-      # DeviceArray, episode_return will not be mutated in-place. (In all other
-      # cases, the returned episode_return will be the same object as the
-      # argument episode_return.)
-      episode_return = tree.map_structure(operator.iadd,
-                                          episode_return,
-                                          timestep.reward)
+        # Equivalent to: episode_return += timestep.reward
+        # We capture the return value because if timestep.reward is a JAX
+        # DeviceArray, episode_return will not be mutated in-place. (In all other
+        # cases, the returned episode_return will be the same object as the
+        # argument episode_return.)
+        episode_return = tree.map_structure(operator.iadd,
+                                            episode_return,
+                                            timestep.reward)
 
     # Record counts.
     counts = self._counter.increment(episodes=1, steps=episode_steps)
