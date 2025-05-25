@@ -98,7 +98,6 @@ def create_variables(
   if isinstance(network, snt.RNNCore):
     initial_state = squeeze_batch_dim(network.initial_state(1))
     dummy_input += [initial_state]
-
   # Forward pass of the network which will create variables as a side effect.
   batched_dummy_input = tile_nested(dummy_input, batch_size)
   dummy_output = network(*batched_dummy_input)
@@ -118,7 +117,7 @@ def create_variables(
       return None
     # If this is not a scalar Tensor, make sure to squeeze out the batch dim.
     if tf.rank(output) > 0:
-      output = squeeze_batch_dim(output)
+      output = output[0]
     return tf.TensorSpec(output.shape, output.dtype)
 
   return tree.map_structure(spec, dummy_output)
