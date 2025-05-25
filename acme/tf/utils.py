@@ -77,6 +77,7 @@ def tile_nested(inputs: types.NestedTensor,
 def create_variables(
     network: snt.Module,
     input_spec: List[Union[types.NestedSpec, tf.TensorSpec]],
+    batch_size: int = 1
 ) -> Optional[tf.TensorSpec]:
   """Builds the network with dummy inputs to create the necessary variables.
 
@@ -99,7 +100,8 @@ def create_variables(
     dummy_input += [initial_state]
 
   # Forward pass of the network which will create variables as a side effect.
-  dummy_output = network(*add_batch_dim(dummy_input))
+  batched_dummy_input = tile_nested(dummy_input, batch_size)
+  dummy_output = network(*batched_dummy_input)
 
   # Evaluate the input signature by converting the dummy input into a
   # TensorSpec. We then save the signature as a property of the network. This is
