@@ -50,13 +50,8 @@ class MCTSActor(acme.Actor):
 
     # Internalize components: model, network, data sink and variable source.
     self._model = model
-    if isinstance(network, snt.Module):
-      self._add_batch_dim = True
-      self._network = tf.function(network)
-    else:
-      self._add_batch_dim = False
-      self._network = network
-
+    self._network = tf.function(network)
+    
     self._variable_client = variable_client
     self._adder = adder
 
@@ -73,19 +68,14 @@ class MCTSActor(acme.Actor):
   def _forward(
       self, observation: types.Observation) -> Tuple[types.Probs, types.Value]:
     """Performs a forward pass of the policy-value network."""
-    if self._add_batch_dim:
-      logits, value = self._network(tree.map_structure(lambda o: tf.expand_dims(o, axis=0)), observation)
-    else:
-      logits, value = self._network(observation)
-
+    logits, value = self._network(tree.map_structure(lambda o: tf.expand_dims(o, axis=0)), observation)
+    
     # Convert to numpy & take softmax.
-    if self._add_batch_dim:
-        logits = logits.numpy().squeeze(axis=0)
-    else:
-        logits = logits.numpy()
+    logits = logits.numpy().squeeze(axis=0)
+    
     value = value.numpy().item()
     probs = special.softmax(logits)
-
+    
     return probs, value
 
   def select_action(self, observation: types.Observation) -> types.Action:
