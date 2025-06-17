@@ -34,6 +34,7 @@ class AZLearner(acme.Learner):
       optimizer: snt.Optimizer,
       dataset: tf.data.Dataset,
       discount: float,
+      training_steps: Optional[int] = None,
       logger: Optional[loggers.Logger] = None,
       counter: Optional[counting.Counter] = None,
   ):
@@ -47,8 +48,12 @@ class AZLearner(acme.Learner):
     self._iterator = iter(dataset)  # pytype: disable=wrong-arg-types
     self._optimizer = optimizer
     self._network = network
+    self._training_steps = training_steps
     self._variables = network.trainable_variables
     self._discount = np.float32(discount)
+
+  def run(self):
+    return super().run(num_steps=self._training_steps)
 
   @tf.function
   def _step(self) -> tf.Tensor:
