@@ -195,6 +195,7 @@ class EnvironmentLoop(core.Worker):
     episode_count: int = 0
     step_count: int = 0
     while not should_terminate(episode_count, step_count):
+      print(f'{self._label}: Running episode {episode_count + 1}...')
       episode_start = time.time()
       result = self.run_episode()
       result = {**result, **{'episode_duration': time.time() - episode_start}}
